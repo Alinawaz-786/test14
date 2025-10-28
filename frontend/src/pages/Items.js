@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useData } from '../state/DataContext';
 import { Link } from 'react-router-dom';
+import { FixedSizeList as List } from 'react-window';
 
 function Items() {
-  const { items, meta, fetchItems } = useData();
+  const { items, meta, loading, fetchItems } = useData();
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -18,7 +19,31 @@ function Items() {
     return () => controller.abort();
   }, [fetchItems, page, q]);
 
-  if (!items.length) return <p>Loading...</p>;
+  // Show a skeleton loader while fetching initial data
+  if (loading && !items.length) {
+    const skeletonCount = 8;
+    return (
+      <div aria-busy="true" aria-live="polite">
+        <form onSubmit={handleSearch} style={{ marginBottom: 12 }}>
+          <input
+            type="text"
+            placeholder="Search..."
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            aria-label="Search items"
+          />
+          <button type="submit">Search</button>
+        </form>
+        <div style={{ border: '1px solid #eee', height: 400, width: '100%' }}>
+          {Array.from({ length: skeletonCount }).map((_, i) => (
+            <div key={i} style={{ height: 48, padding: '8px', boxSizing: 'border-box' }}>
+              <div style={{ background: '#eee', height: 16, width: '40%', borderRadius: 4 }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const handleSearch = e => {
     e.preventDefault();
@@ -29,22 +54,40 @@ function Items() {
   return (
     <div>
       <form onSubmit={handleSearch} style={{ marginBottom: 12 }}>
+        <label htmlFor="items-search" style={{ display: 'none' }}>Search items</label>
         <input
+          id="items-search"
           type="text"
           placeholder="Search..."
           value={q}
           onChange={e => setQ(e.target.value)}
+          aria-label="Search items"
         />
-        <button type="submit">Search</button>
+        <button type="submit" aria-label="Search">Search</button>
       </form>
 
-      <ul>
-        {items.map(item => (
-          <li key={item.id}>
-            <Link to={'/items/' + item.id}>{item.name}</Link>
-          </li>
-        ))}
-      </ul>
+      {/* Virtualized list for large datasets. Each row is 48px high. */}
+      <div style={{ border: '1px solid #eee', height: 400, width: '100%' }} role="list" aria-label="Items list">
+        <List
+          height={400}
+          itemCount={items.length}
+          itemSize={48}
+          width="100%"
+        >
+          {({ index, style }) => {
+            const item = items[index];
+            return (
+              <div
+                role="listitem"
+                style={{ ...style, display: 'flex', alignItems: 'center', padding: '0 8px', boxSizing: 'border-box' }}
+                key={item.id}
+              >
+                <Link to={'/items/' + item.id}>{item.name}</Link>
+              </div>
+            );
+          }}
+        </List>
+      </div>
 
       <div style={{ marginTop: 12 }}>
         <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={meta.page <= 1}>

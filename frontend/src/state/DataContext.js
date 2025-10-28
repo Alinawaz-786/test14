@@ -5,6 +5,7 @@ const DataContext = createContext();
 export function DataProvider({ children }) {
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({ total: 0, page: 1, limit: 10, totalPages: 1, q: '' });
+  const [loading, setLoading] = useState(false);
 
   // fetchItems accepts either an options object { page, limit, q, signal }
   // or an AbortSignal directly (for backward compatibility).
@@ -25,6 +26,7 @@ export function DataProvider({ children }) {
     }
 
     try {
+      setLoading(true);
       const params = new URLSearchParams();
       params.set('limit', limit);
       params.set('page', page);
@@ -53,6 +55,9 @@ export function DataProvider({ children }) {
     } catch (err) {
       if (err && err.name === 'AbortError') return;
       throw err;
+    }
+    finally {
+      setLoading(false);
     }
   }, []);
 
